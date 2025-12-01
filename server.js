@@ -1,77 +1,103 @@
 import express from "express";
 import cors from "cors";
-import db from "./database.js";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import { auth, adminOnly } from "./auth.js";
+import fs from "fs-extra";
 
 const app = express();
+const PORT = process.env.PORT || 10000;
+const SECRET = process.env.JWT_SECRET || "segredo123";
+
+// Caminho do "banco"
+const DB_FILE = "./database.json";
+
+if (!fs.existsSync(DB_FILE)) {
+  fs.writeJSONSync(DB_FILE, {
+    pallets: [],
+    users: [
+      { username: "admin", password: "admin123", role: "admin" },
+      { username: "func", password: "func123", role: "funcionario" }
+    ]
+  });
+}
+
 app.use(cors());
 app.use(express.json());
 
-// LOGIN
+const loadDB = () => fs.readJSONSync(DB_FILE);
+const saveDB = (db) => fs.writeJSONSync(DB_FILE, db, { spaces: 2 });
+
+// ------------------------------ LOGIN ----------------------------------
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
 
-  db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
-    if (!user) return res.status(401).json({ error: "Usuário não encontrado" });
+  const db = loadDB();
+  const user = db.users.find(
+    u => u.username === username && u.password === password
+  );
 
-    if (!bcrypt.compareSync(password, user.password))
-      return res.status(401).json({ error: "Senha incorreta" });
+  if (!user) return res.status(401).json({ error: "Credenciais inválidas" });
 
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      "SEGREDO_SUPER_SEGURO",
-      { expiresIn: "8h" }
-    );
+  const token = jwt.sign(
+    { username: user.username, role: user.role },
+    SECRET,
+    { expiresIn: "12h" }
+  );
 
-    res.json({ token, role: user.role });
-  });
+  res.json({ token, role: user.role });
 });
 
-// =================== PALLETES ===================
+// ------------------------------ AUTH MIDDLEWARE ------------------------
+function auth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header) return res.status(401).json({ error: "Token ausente" });
 
-// listar paletes (todos podem)
+  const token = header.split(" ")[1];
+
+  jwt.verify(token, SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Token inválido" });
+    req.user = user;
+    next();
+  });
+}
+
+// ------------------------------ PALETES --------------------------------
 app.get("/pallets", auth, (req, res) => {
-  db.all("SELECT * FROM pallets", [], (err, rows) => {
-    res.json(rows.map(r => ({
-      id: r.id,
-      number: r.number,
-      color: r.color,
-      products: JSON.parse(r.products)
-    })));
-  });
+  res.json(loadDB().pallets);
 });
 
-// criar palete (admin only)
-app.post("/pallets", auth, adminOnly, (req, res) => {
-  const { number, color, products } = req.body;
-  db.run(
-    "INSERT INTO pallets (number, color, products) VALUES (?, ?, ?)",
-    [number, color, JSON.stringify(products)],
-    function () {
-      res.json({ id: this.lastID });
-    }
-  );
+app.post("/pallets", auth, (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ error: "Somente admin" });
+
+  const db = loadDB();
+  db.pallets.push(req.body);
+  saveDB(db);
+
+  res.json({ ok: true });
 });
 
-// editar palete
-app.put("/pallets/:id", auth, adminOnly, (req, res) => {
-  const { number, color, products } = req.body;
-  db.run(
-    "UPDATE pallets SET number=?, color=?, products=? WHERE id=?",
-    [number, color, JSON.stringify(products), req.params.id],
-    () => res.json({ ok: true })
-  );
+app.put("/pallets/:id", auth, (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ error: "Somente admin" });
+
+  const db = loadDB();
+  db.pallets[req.params.id] = req.body;
+  saveDB(db);
+
+  res.json({ ok: true });
 });
 
-// deletar palete
-app.delete("/pallets/:id", auth, adminOnly, (req, res) => {
-  db.run("DELETE FROM pallets WHERE id=?", [req.params.id], () => {
-    res.json({ ok: true });
-  });
+app.delete("/pallets/:id", auth, (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ error: "Somente admin" });
+
+  const db = loadDB();
+  db.pallets.splice(req.params.id, 1);
+  saveDB(db);
+
+  res.json({ ok: true });
 });
 
-// SERVIDOR
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Servidor rodando na porta", PORT));
+app.listen(PORT, () =>
+  console.log("Servidor rodando na porta " + PORT)
+);
