@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sistema de Paletes NLE</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Biblioteca PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-title">
+      <h1>Sistema de Paletes NLE</h1>
+      <div class="subtitle">Controle de Paletes • Admin & Funcionário</div>
+    </div>
+
+    <div class="header-user">
+      <span id="usernameDisplay"></span>
+      <button id="logoutBtn" class="btn-warning">Sair</button>
+    </div>
+  </header>
+
+
+  <!-- TOPO FUNÇÕES -->
+  <section class="toolbar">
+
+    <!-- Busca -->
+    <div class="toolbar-block">
+      <input id="search" type="text" placeholder="Pesquisar palete ou produto">
+      <button id="btnClear" class="btn-secondary">Limpar</button>
+    </div>
+
+    <!-- Botões do Admin -->
+    <div class="toolbar-block admin-only">
+      <button id="btnNew" class="btn-primary">Novo Palete</button>
+      <button id="btnExport" class="btn-secondary">Exportar JSON</button>
+      <button id="btnImport" class="btn-secondary">Importar JSON</button>
+    </div>
+
+    <!-- Separação -->
+    <div class="toolbar-block">
+      <button id="btnSeparate" class="btn-secondary">Separação</button>
+    </div>
+
+    <!-- PDF -->
+    <div class="toolbar-block">
+      <button id="btnPdfPortrait" class="btn-secondary">PDF Retrato</button>
+      <button id="btnPdfLandscape" class="btn-secondary">PDF Paisagem</button>
+    </div>
+
+  </section>
+
+
+  <!-- LISTA DE PALETES -->
+  <main>
+    <div id="grid" class="grid"></div>
+  </main>
+
+
+  <!-- MODAL: NOVO / EDITAR -->
+  <div class="modal" id="modalEdit">
+    <div class="modal-box">
+
+      <h2 id="modalTitle">Novo Palete</h2>
+
+      <label>Número do palete:</label>
+      <input type="text" id="palletNumber">
+
+      <label>Cor:</label>
+      <input type="text" id="palletColor" placeholder="#0099ff">
+
+      <label>Produtos (separados por vírgula):</label>
+      <textarea id="palletProducts" rows="5"></textarea>
+
+      <div class="modal-actions">
+        <button id="savePallet" class="btn-primary">Salvar</button>
+        <button id="cancelPallet" class="btn-secondary">Cancelar</button>
+        <button id="deletePallet" class="btn-danger admin-only">Excluir</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- MODAL: DETALHES -->
+  <div class="modal" id="modalDetail">
+    <div class="modal-box">
+
+      <h2 id="detailTitle">Detalhes do Palete</h2>
+      <div id="detailColor" class="detail-color"></div>
+
+      <h3>Produtos:</h3>
+      <div id="detailList" class="detail-list"></div>
+
+      <div class="modal-actions">
+        <button id="closeDetail" class="btn-secondary">Fechar</button>
+        <button id="editFromDetail" class="btn-primary admin-only">Editar</button>
+      </div>
+
+    </div>
+  </div>
+
+
+
+  <!-- MODAL: SEPARAÇÃO -->
+  <div class="modal" id="modalSeparate">
+    <div class="modal-box">
+
+      <h2>Separação</h2>
+
+      <textarea id="sepInput" rows="4" placeholder="Ex: 878, 768"></textarea>
+
+      <h3>Resultado:</h3>
+      <div id="sepResult" class="sep-result"></div>
+
+      <div class="modal-actions">
+        <button id="sepOk" class="btn-primary">OK</button>
+        <button id="sepPrint" class="btn-secondary">PDF Retrato</button>
+        <button id="sepPrintLand" class="btn-secondary">PDF Paisagem</button>
+        <button id="sepClose" class="btn-secondary">Fechar</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- INPUT IMPORTAR -->
+  <input id="fileInput" type="file" accept=".json" style="display:none">
+
+  <!-- ARQUIVO JS -->
+  <script src="app.js"></script>
+
+</body>
+</html>
+<!-- A PARTIR DAQUI É CONTINUAÇÃO DIRETA DA PARTE 1 -->
+
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0b1220;
+    color: #e5e5e5;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #111a2a;
+    border-bottom: 1px solid #182335;
+  }
+
+  .header-title h1 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* BOTÕES */
+  .btn-primary {
+    background: #3b82f6;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .btn-danger {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .btn-warning {
+    background: #f59e0b;
+    border: none;
+    color: #1f1f1f;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  /* TOPO */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .toolbar-block {
+    display: flex;
+    gap: 10px;
+  }
+
+  .admin-only {
+    display: none; /* JS libera para admins */
+  }
+
+  /* GRID DE PALETES */
+  .grid {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+
+  .pallet-card {
+    background: #111a2e;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .colorbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid black;
+  }
+
+  .pallet-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .chip {
+    background: rgba(255,255,255,0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  /* MODAL BASE */
+  .modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 1000;
+  }
+
+  .modal.open {
+    display: flex;
+  }
+
+  .modal-box {
+    background: #0f172a;
+    padding: 20px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid #1e293b;
+  }
+
+  .modal-box input,
+  .modal-box textarea {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: white;
+    margin-bottom: 10px;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14px;
+  }
+
+  /* DETALHES */
+  .detail-color {
+    width: 70px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid black;
+    margin-bottom: 10px;
+  }
+
+  .detail-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* SEPARAÇÃO */
+  .sep-result {
+    margin-top: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #1e293b;
+    padding: 10px;
+    border-radius: 6px;
+  }
+
+</style>
