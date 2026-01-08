@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Login — Sistema de Paletes NLE</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg">
+  <main class="center-card">
+    <h1>Sistema de Paletes NLE</h1>
+    <p class="muted">Entre com sua conta (admin / func)</p>
+
+    <label>Usuário</label>
+    <input id="username" type="text" placeholder="usuario">
+
+    <label>Senha</label>
+    <input id="password" type="password" placeholder="senha">
+
+    <div class="row">
+      <button id="btnLogin" class="btn primary">Entrar</button>
+      <button id="btnOffline" class="btn secondary">Modo local</button>
+    </div>
+
+    <div id="msg" class="muted small">Servidor: <span id="serverStatus">desconhecido</span></div>
+    <div id="err" class="error" style="display:none"></div>
+  </main>
+
+  <script>
+    // Ajuste esta URL para o seu backend deployed (Render)
+    const API_BASE = "http://localhost:10000";
+
+    async function ping(){
+      try{
+        const r = await fetch(API_BASE + "/pallets", { method: "GET" });
+        document.getElementById('serverStatus').innerText = r.status;
+      }catch(e){
+        document.getElementById('serverStatus').innerText = "offline";
+      }
+    }
+    ping();
+
+    document.getElementById('btnLogin').onclick = async ()=>{
+      document.getElementById('err').style.display='none';
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if(!username || !password){ showErr('Preencha usuário e senha'); return; }
+
+      try{
+        const res = await fetch(API_BASE + '/login', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({username,password})
+        });
+        const j = await res.json();
+        if(!res.ok){ showErr(j.error || 'Falha no login'); return; }
+        localStorage.setItem('nle_token', j.token);
+        localStorage.setItem('nle_role', j.role || 'funcionario');
+        localStorage.setItem('nle_user', username);
+        window.location.href = 'sistema.html';
+      }catch(e){
+        showErr('Erro ao conectar: ' + e.message);
+      }
+    };
+
+    document.getElementById('btnOffline').onclick = ()=>{
+      localStorage.setItem('nle_offline','1');
+      localStorage.setItem('nle_role','funcionario');
+      window.location.href = 'sistema.html';
+    };
+
+    function showErr(txt){
+      const el = document.getElementById('err');
+      el.style.display='block';
+      el.innerText = txt;
+    }
+
+    document.addEventListener('keypress', (ev)=>{ if(ev.key==='Enter') document.getElementById('btnLogin').click(); });
+  </script>
+</body>
+</html>

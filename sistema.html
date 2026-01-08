@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Sistema — Paletes NLE</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body class="app-bg">
+  <header class="topbar">
+    <div>
+      <h1>Sistema de Paletes NLE</h1>
+      <div class="small muted" id="userInfo"></div>
+    </div>
+    <div class="header-actions">
+      <button id="logoutBtn" class="btn secondary">Sair</button>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div>
+      <input id="search" placeholder="Pesquisar palete ou produto">
+      <button id="btnClear" class="btn secondary">Limpar</button>
+    </div>
+
+    <div class="admin-block">
+      <button id="btnNew" class="btn primary">Novo Palete</button>
+      <button id="btnExport" class="btn secondary">Exportar JSON</button>
+      <button id="btnImport" class="btn secondary">Importar JSON</button>
+    </div>
+
+    <div>
+      <button id="btnSeparate" class="btn secondary">Separação</button>
+      <button id="btnPdfPortrait" class="btn secondary">PDF Retrato</button>
+      <button id="btnPdfLandscape" class="btn secondary">PDF Paisagem</button>
+    </div>
+  </section>
+
+  <main class="container">
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <!-- Modals -->
+  <div id="modalEdit" class="modal"><div class="modal-box">
+    <h2 id="modalTitle">Novo Palete</h2>
+    <label>Número</label><input id="palletNumber">
+    <label>Cor</label><input id="palletColor" placeholder="#2563eb">
+    <label>Produtos (vírgula)</label><textarea id="palletProducts" rows="4"></textarea>
+    <div class="modal-actions">
+      <button id="savePallet" class="btn primary">Salvar</button>
+      <button id="cancelPallet" class="btn secondary">Cancelar</button>
+      <button id="deletePallet" class="btn danger" style="display:none">Excluir</button>
+    </div>
+  </div></div>
+
+  <div id="modalDetail" class="modal"><div class="modal-box">
+    <h2 id="detailTitle">Palete</h2>
+    <div id="detailColor" class="detail-color"></div>
+    <div id="detailList" class="detail-list"></div>
+    <div class="modal-actions">
+      <button id="closeDetail" class="btn secondary">Fechar</button>
+      <button id="editFromDetail" class="btn primary">Editar</button>
+    </div>
+  </div></div>
+
+  <div id="modalSeparate" class="modal"><div class="modal-box">
+    <h2>Separação</h2>
+    <textarea id="sepInput" rows="4" placeholder="Ex: 88, 768"></textarea>
+    <div id="sepResult" class="sep-result"></div>
+    <div class="modal-actions">
+      <button id="sepOk" class="btn primary">OK</button>
+      <button id="sepPrint" class="btn secondary">PDF Retrato</button>
+      <button id="sepPrintLand" class="btn secondary">PDF Paisagem</button>
+      <button id="sepClose" class="btn secondary">Fechar</button>
+    </div>
+  </div></div>
+
+  <input id="fileInput" type="file" accept="application/json" style="display:none">
+
+  <script src="app.js"></script>
+</body>
+</html>
