@@ -86,7 +86,7 @@
         // opcional: salvar username
         localStorage.setItem('nle_user', username);
         // redireciona
-        window.location.href = 'sistema.html';
+        window.location.href = 'app.html';
       } catch (e) {
         err.style.display='block';
         err.textContent = 'Erro ao conectar com o servidor: ' + e.message;
@@ -98,7 +98,7 @@
       localStorage.setItem('nle_offline','1');
       // role admin para testar? deixamos funcionário por segurança
       localStorage.setItem('nle_role','funcionario');
-      window.location.href = 'sistema.html';
+      window.location.href = 'app.html';
     };
 
     // Enter to submit
@@ -108,3 +108,4 @@
   </script>
 </body>
 </html>
+
