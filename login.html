@@ -52,6 +52,12 @@
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({username,password})
         });
+        const contentType = res.headers.get('content-type') || '';
+        if(!contentType.includes('application/json')){
+          const text = await res.text();
+          showErr(`Erro ao conectar (${res.status}): ${text.slice(0, 200)}`);
+          return;
+        }
         const j = await res.json();
         if(!res.ok){ showErr(j.error || 'Falha no login'); return; }
         localStorage.setItem('nle_token', j.token);
