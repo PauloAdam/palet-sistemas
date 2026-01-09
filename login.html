@@ -27,8 +27,9 @@
   </main>
 
   <script>
-    // Usa o mesmo domínio/porta do backend publicado
-    const API_BASE = window.location.origin;
+    // Usa o mesmo domínio/porta e respeita subpastas (ex.: /paletes)
+    const BASE_PATH = window.location.pathname.replace(/\/[^/]*$/, '');
+    const API_BASE = window.location.origin + BASE_PATH;
 
     async function ping(){
       try{

@@ -1,5 +1,6 @@
-// Frontend app.js - full features (uses same origin as the deployed backend)
-const API_URL = window.location.origin;
+// Frontend app.js - full features (uses same origin and subfolder path)
+const BASE_PATH = window.location.pathname.replace(/\/[^/]*$/, '');
+const API_URL = window.location.origin + BASE_PATH;
 const TOKEN_KEY = "nle_token";
 const ROLE_KEY = "nle_role";
 
