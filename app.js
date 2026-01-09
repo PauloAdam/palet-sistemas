@@ -1,5 +1,6 @@
-// Frontend app.js - full features (replace API_URL with your backend URL)
-const API_URL = "http://localhost:10000"; // <<-- CHANGE to your Render URL after deploy
+// Frontend app.js - full features (uses same origin and subfolder path)
+const BASE_PATH = window.location.pathname.replace(/\/[^/]*$/, '');
+const API_URL = window.location.origin + BASE_PATH;
 const TOKEN_KEY = "nle_token";
 const ROLE_KEY = "nle_role";
 
@@ -58,10 +59,12 @@ if(window.location.pathname.includes('sistema.html')){
   const btnPdfPortrait = document.getElementById('btnPdfPortrait');
   const btnPdfLandscape = document.getElementById('btnPdfLandscape');
   const fileInput = document.getElementById('fileInput');
+  const btnNewUser = document.getElementById('btnNewUser');
 
   const modalEdit = document.getElementById('modalEdit');
   const modalDetail = document.getElementById('modalDetail');
   const modalSeparate = document.getElementById('modalSeparate');
+  const modalUser = document.getElementById('modalUser');
 
   const palletNumber = document.getElementById('palletNumber');
   const palletColor = document.getElementById('palletColor');
@@ -73,6 +76,10 @@ if(window.location.pathname.includes('sistema.html')){
 
   const sepInput = document.getElementById('sepInput');
   const sepResult = document.getElementById('sepResult');
+  const newUsername = document.getElementById('newUsername');
+  const newPassword = document.getElementById('newPassword');
+  const newRole = document.getElementById('newRole');
+  const userList = document.getElementById('userList');
 
   let pallets = [];
   let editingIndex = null;
@@ -108,6 +115,12 @@ if(window.location.pathname.includes('sistema.html')){
   btnImport.onclick = ()=> fileInput.click();
   fileInput.onchange = importarJSON;
 
+  if(btnNewUser){
+    btnNewUser.onclick = ()=> openUserModal();
+  }
+  document.getElementById('cancelUser').onclick = ()=> modalUser.classList.remove('open');
+  document.getElementById('saveUser').onclick = saveUser;
+
   // fetch pallets from backend
   async function load(){
     const offline = localStorage.getItem('nle_offline');
@@ -124,6 +137,28 @@ if(window.location.pathname.includes('sistema.html')){
       render();
     }catch(e){
       alert('Erro ao carregar paletes: ' + e.message);
+    }
+  }
+
+  async function loadUsers(){
+    if(getRole() !== 'admin') return;
+    if(localStorage.getItem('nle_offline')){
+      userList.innerHTML = '<div class="small muted">Cadastro de usuários indisponível no modo local.</div>';
+      return;
+    }
+    try{
+      const res = await fetch(API_URL + '/users', { headers: { Authorization: 'Bearer ' + getToken() } });
+      if(!res.ok) return;
+      const users = await res.json();
+      userList.innerHTML = '';
+      users.forEach(user => {
+        const item = document.createElement('div');
+        item.className = 'user-item';
+        item.innerHTML = `<span>${user.username}</span><span class="small muted">${user.role}</span>`;
+        userList.appendChild(item);
+      });
+    }catch(e){
+      userList.innerHTML = '<div class="small muted">Erro ao carregar usuários.</div>';
     }
   }
 
@@ -171,6 +206,41 @@ if(window.location.pathname.includes('sistema.html')){
     document.getElementById('modalTitle').innerText = 'Novo Palete';
     document.getElementById('deletePallet').style.display = 'none';
     modalEdit.classList.add('open');
+  }
+
+  function openUserModal(){
+    newUsername.value = '';
+    newPassword.value = '';
+    newRole.value = 'funcionario';
+    loadUsers();
+    modalUser.classList.add('open');
+  }
+
+  async function saveUser(){
+    const username = (newUsername.value || '').trim();
+    const password = (newPassword.value || '').trim();
+    const role = newRole.value;
+    if(!username || !password) return alert('Informe usuário e senha');
+    if(getRole() !== 'admin') return alert('Apenas admin');
+    if(localStorage.getItem('nle_offline')) return alert('Modo local não permite cadastro');
+    try{
+      const res = await fetch(API_URL + '/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify({ username, password, role })
+      });
+      const data = await res.json();
+      if(!res.ok) return alert(data.error || 'Erro ao cadastrar');
+      newUsername.value = '';
+      newPassword.value = '';
+      newRole.value = 'funcionario';
+      await loadUsers();
+    }catch(e){
+      alert('Erro: ' + e.message);
+    }
   }
 
   async function savePallet(){
