@@ -38,6 +38,10 @@ async function runTests(){
       body: JSON.stringify(palletPayload)
     });
     if(createRes.status !== 201) throw new Error('Create pallet failed');
+    const dbAfterCreate = JSON.parse(await fs.readFile(DB_PATH, 'utf8'));
+    if(!Array.isArray(dbAfterCreate.pallets) || dbAfterCreate.pallets.length === 0){
+      throw new Error('Database did not persist pallet');
+    }
 
     const listRes = await fetch(`${baseUrl}/pallets`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -51,6 +55,10 @@ async function runTests(){
       headers: { Authorization: `Bearer ${token}` }
     });
     if(!deleteRes.ok) throw new Error('Delete pallet failed');
+    const dbAfterDelete = JSON.parse(await fs.readFile(DB_PATH, 'utf8'));
+    if(dbAfterDelete.pallets && dbAfterDelete.pallets.length !== 0){
+      throw new Error('Database did not delete pallet');
+    }
 
     console.log('All tests passed');
   }finally{

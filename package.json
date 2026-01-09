@@ -4,7 +4,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "node test/server.test.js"
+    "test": "node test/server.test.js && node test/ui.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
