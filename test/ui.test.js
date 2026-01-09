@@ -11,8 +11,12 @@ const files = [
     'id="btnSeparate"',
     'id="btnPdfPortrait"',
     'id="btnPdfLandscape"',
+    'id="btnNewUser"',
     'id="savePallet"',
-    'id="deletePallet"'
+    'id="deletePallet"',
+    'id="newUsername"',
+    'id="newPassword"',
+    'id="newRole"'
   ] }
 ];
 

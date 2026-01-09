@@ -28,6 +28,29 @@ async function runTests(){
 
     const token = loginBody.token;
     const palletPayload = { number: 'P-001', color: '#ffffff', products: ['A1', 'B2'] };
+    const userPayload = { username: 'novo_usuario', password: 'senha123', role: 'funcionario' };
+
+    const userCreateRes = await fetch(`${baseUrl}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(userPayload)
+    });
+    if(userCreateRes.status !== 201) throw new Error('Create user failed');
+    const dbAfterUser = JSON.parse(await fs.readFile(DB_PATH, 'utf8'));
+    if(!Array.isArray(dbAfterUser.users) || !dbAfterUser.users.some(u => u.username === userPayload.username)){
+      throw new Error('Database did not persist user');
+    }
+    const usersRes = await fetch(`${baseUrl}/users`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if(!usersRes.ok) throw new Error('List users failed');
+    const users = await usersRes.json();
+    if(!Array.isArray(users) || !users.some(u => u.username === userPayload.username)){
+      throw new Error('User missing from list');
+    }
 
     const createRes = await fetch(`${baseUrl}/pallets`, {
       method: 'POST',

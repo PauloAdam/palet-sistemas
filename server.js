@@ -74,6 +74,26 @@ app.post('/pallets', authRequired, adminOnly, async (req, res) => {
   return res.status(201).json({ ok: true });
 });
 
+app.get('/users', authRequired, adminOnly, async (req, res) => {
+  const db = await loadDb();
+  const users = (db.users || []).map(({ username, role }) => ({ username, role }));
+  return res.json(users);
+});
+
+app.post('/users', authRequired, adminOnly, async (req, res) => {
+  const { username, password, role } = req.body || {};
+  if(!username || !password || !role) return res.status(400).json({ error: 'Dados inválidos' });
+  const normalizedRole = role === 'admin' ? 'admin' : 'funcionario';
+  const db = await loadDb();
+  db.users = db.users || [];
+  if(db.users.some(u => u.username === username)){
+    return res.status(409).json({ error: 'Usuário já existe' });
+  }
+  db.users.push({ username, password, role: normalizedRole });
+  await saveDb(db);
+  return res.status(201).json({ ok: true });
+});
+
 app.put('/pallets/:index', authRequired, adminOnly, async (req, res) => {
   const index = Number(req.params.index);
   if(!Number.isInteger(index)) return res.status(400).json({ error: 'Índice inválido' });
