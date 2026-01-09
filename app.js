@@ -7,6 +7,7 @@ const OFFLINE_KEY = 'nle_offline';
 const USERS_KEY = 'nle_users_v1';
 const PALLETS_KEY = 'pallets_v1';
 
+const STORAGE_VERSION = '2025-01-05';
 const DEFAULT_USERS = [
   { username: 'admin', password: 'admin123', role: 'admin' },
   { username: 'func', password: 'func123', role: 'funcionario' }
@@ -15,6 +16,15 @@ const DEFAULT_USERS = [
 function getToken(){ return localStorage.getItem(TOKEN_KEY); }
 function getRole(){ return localStorage.getItem(ROLE_KEY) || 'funcionario'; }
 function isOffline(){ return localStorage.getItem(OFFLINE_KEY) === '1' || getToken() === 'local'; }
+
+function ensureStorageVersion(){
+  const current = localStorage.getItem('nle_version');
+  if(current === STORAGE_VERSION) return;
+  [TOKEN_KEY, ROLE_KEY, OFFLINE_KEY, USERS_KEY, PALLETS_KEY, 'nle_user'].forEach((key)=>{
+    localStorage.removeItem(key);
+  });
+  localStorage.setItem('nle_version', STORAGE_VERSION);
+}
 
 async function ensureLocalData(){
   const hasUsers = !!localStorage.getItem(USERS_KEY);
@@ -101,6 +111,7 @@ async function localLogin(username, password){
 if(window.location.pathname.includes('login.html')){
   let serverAvailable = false;
   document.addEventListener('DOMContentLoaded', async ()=>{
+    ensureStorageVersion();
     await ensureLocalData();
     const statusEl = document.getElementById('serverStatus');
     if(statusEl){
@@ -155,6 +166,7 @@ if(window.location.pathname.includes('login.html')){
 
 // SISTEMA PAGE logic
 if(window.location.pathname.includes('sistema.html')){
+  ensureStorageVersion();
   // elements
   const userInfo = document.getElementById('userInfo');
   const logoutBtn = document.getElementById('logoutBtn');
