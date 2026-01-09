@@ -29,6 +29,7 @@
       <button id="btnNew" class="btn primary">Novo Palete</button>
       <button id="btnExport" class="btn secondary">Exportar JSON</button>
       <button id="btnImport" class="btn secondary">Importar JSON</button>
+      <button id="btnNewUser" class="btn secondary">Novo Usuário</button>
     </div>
 
     <div>
@@ -77,8 +78,25 @@
     </div>
   </div></div>
 
+  <div id="modalUser" class="modal"><div class="modal-box">
+    <h2>Novo Usuário</h2>
+    <label>Usuário</label><input id="newUsername" autocomplete="off">
+    <label>Senha</label><input id="newPassword" type="password">
+    <label>Perfil</label>
+    <select id="newRole">
+      <option value="funcionario">Funcionário</option>
+      <option value="admin">Admin</option>
+    </select>
+    <div class="muted small">Usuários existentes</div>
+    <div id="userList" class="user-list"></div>
+    <div class="modal-actions">
+      <button id="saveUser" class="btn primary">Salvar</button>
+      <button id="cancelUser" class="btn secondary">Cancelar</button>
+    </div>
+  </div></div>
+
   <input id="fileInput" type="file" accept="application/json" style="display:none">
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20250105"></script>
 </body>
 </html>
