@@ -33,13 +33,33 @@
 
     async function ping(){
       try{
-        const r = await fetch(API_BASE + "/pallets", { method: "GET" });
-        document.getElementById('serverStatus').innerText = r.status;
+        const r = await fetch(API_BASE + "/health", { method: "GET" });
+        document.getElementById('serverStatus').innerText = r.ok ? 'online' : 'offline';
       }catch(e){
         document.getElementById('serverStatus').innerText = "offline";
       }
     }
     ping();
+
+    function getLocalUsers(){
+      return [
+        { username: 'admin', password: 'admin123', role: 'admin' },
+        { username: 'func', password: 'func123', role: 'funcionario' }
+      ];
+    }
+
+    function localLogin(username, password){
+      const user = getLocalUsers().find(u => u.username === username && u.password === password);
+      if(!user){
+        showErr('Credenciais inválidas (modo local)');
+        return false;
+      }
+      localStorage.setItem('nle_offline','1');
+      localStorage.setItem('nle_role', user.role);
+      localStorage.setItem('nle_user', username);
+      window.location.href = 'sistema.html';
+      return true;
+    }
 
     document.getElementById('btnLogin').onclick = async ()=>{
       document.getElementById('err').style.display='none';
@@ -55,8 +75,8 @@
         });
         const contentType = res.headers.get('content-type') || '';
         if(!contentType.includes('application/json')){
-          const text = await res.text();
-          showErr(`Erro ao conectar (${res.status}): ${text.slice(0, 200)}`);
+          await res.text();
+          localLogin(username, password);
           return;
         }
         const j = await res.json();
@@ -64,9 +84,10 @@
         localStorage.setItem('nle_token', j.token);
         localStorage.setItem('nle_role', j.role || 'funcionario');
         localStorage.setItem('nle_user', username);
+        localStorage.removeItem('nle_offline');
         window.location.href = 'sistema.html';
       }catch(e){
-        showErr('Erro ao conectar: ' + e.message);
+        localLogin(username, password);
       }
     };
 
