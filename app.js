@@ -1,46 +1,152 @@
-// Frontend app.js - full features (replace API_URL with your backend URL)
-const API_URL = "http://localhost:10000"; // <<-- CHANGE to your Render URL after deploy
-const TOKEN_KEY = "nle_token";
-const ROLE_KEY = "nle_role";
+// Frontend app.js - works with Apache (local storage) or backend when available
+const BASE_PATH = window.location.pathname.replace(/\/[^/]*$/, '');
+const API_URL = window.location.origin + BASE_PATH;
+const TOKEN_KEY = 'nle_token';
+const ROLE_KEY = 'nle_role';
+const OFFLINE_KEY = 'nle_offline';
+const USERS_KEY = 'nle_users_v1';
+const PALLETS_KEY = 'pallets_v1';
+
+const DEFAULT_USERS = [
+  { username: 'admin', password: 'admin123', role: 'admin' },
+  { username: 'func', password: 'func123', role: 'funcionario' }
+];
 
 function getToken(){ return localStorage.getItem(TOKEN_KEY); }
 function getRole(){ return localStorage.getItem(ROLE_KEY) || 'funcionario'; }
+function isOffline(){ return localStorage.getItem(OFFLINE_KEY) === '1' || getToken() === 'local'; }
+
+async function ensureLocalData(){
+  const hasUsers = !!localStorage.getItem(USERS_KEY);
+  const hasPallets = !!localStorage.getItem(PALLETS_KEY);
+  if(hasUsers && hasPallets) return;
+
+  try{
+    const res = await fetch('database.json', { cache: 'no-store' });
+    if(res.ok){
+      const data = await res.json();
+      const users = Array.isArray(data.users) ? data.users : DEFAULT_USERS;
+      const pallets = Array.isArray(data.pallets) ? data.pallets : [];
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+      localStorage.setItem(PALLETS_KEY, JSON.stringify(pallets));
+      return;
+    }
+  }catch(e){
+    // ignore and fallback
+  }
+
+  if(!hasUsers){
+    localStorage.setItem(USERS_KEY, JSON.stringify(DEFAULT_USERS));
+  }
+  if(!hasPallets){
+    localStorage.setItem(PALLETS_KEY, JSON.stringify([]));
+  }
+}
+
+function getLocalUsers(){
+  return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+}
+
+function setLocalUsers(users){
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function getLocalPallets(){
+  return JSON.parse(localStorage.getItem(PALLETS_KEY) || '[]');
+}
+
+function setLocalPallets(pallets){
+  localStorage.setItem(PALLETS_KEY, JSON.stringify(pallets));
+}
 
 async function requireAuth(){
   const token = getToken();
-  const offline = localStorage.getItem('nle_offline');
-  if(!token && !offline && !window.location.pathname.includes('login.html')){
+  if(!token && !window.location.pathname.includes('login.html')){
     window.location.href = 'login.html';
     return false;
   }
   return true;
 }
 
+async function tryServerLogin(username, password){
+  try{
+    const res = await fetch(API_URL + '/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password })
+    });
+    const contentType = res.headers.get('content-type') || '';
+    if(!contentType.includes('application/json')){
+      return null;
+    }
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Falha no login');
+    return { token: data.token, role: data.role || 'funcionario', mode: 'server' };
+  }catch(e){
+    return null;
+  }
+}
+
+async function localLogin(username, password){
+  await ensureLocalData();
+  const users = getLocalUsers();
+  const user = users.find(u => u.username === username && u.password === password);
+  if(!user){
+    throw new Error('Usuário ou senha inválidos');
+  }
+  return { token: 'local', role: user.role || 'funcionario', mode: 'local' };
+}
+
 // LOGIN PAGE logic
 if(window.location.pathname.includes('login.html')){
-  document.addEventListener('DOMContentLoaded', ()=>{ document.getElementById('username').focus(); });
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    await ensureLocalData();
+    const statusEl = document.getElementById('serverStatus');
+    if(statusEl){
+      try{
+        const res = await fetch(API_URL + '/health');
+        const contentType = res.headers.get('content-type') || '';
+        statusEl.innerText = res.ok && contentType.includes('application/json') ? 'online' : 'local';
+      }catch(e){
+        statusEl.innerText = 'local';
+      }
+    }
+    const userInput = document.getElementById('username');
+    if(userInput){ userInput.focus(); }
+  });
 
   document.getElementById('btnLogin').onclick = async ()=>{
     const u = document.getElementById('username').value.trim();
     const p = document.getElementById('password').value.trim();
     if(!u||!p) return alert('Preencha usuário e senha');
 
-    try{
-      const res = await fetch(API_URL + '/login', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({username:u,password:p})
-      });
-      const j = await res.json();
-      if(!res.ok) return alert(j.error || 'Falha no login');
-      localStorage.setItem(TOKEN_KEY, j.token);
-      localStorage.setItem(ROLE_KEY, j.role || 'funcionario');
-      localStorage.removeItem('nle_offline');
-      window.location = 'sistema.html';
-    }catch(e){
-      alert('Erro: ' + e.message);
+    const serverAuth = await tryServerLogin(u, p);
+    let auth = serverAuth;
+    if(!auth){
+      try{
+        auth = await localLogin(u, p);
+      }catch(e){
+        return alert(e.message);
+      }
     }
+
+    localStorage.setItem(TOKEN_KEY, auth.token);
+    localStorage.setItem(ROLE_KEY, auth.role);
+    localStorage.setItem(OFFLINE_KEY, auth.mode === 'local' ? '1' : '0');
+    localStorage.setItem('nle_user', u);
+    window.location = 'sistema.html';
   };
+
+  const offlineBtn = document.getElementById('btnOffline');
+  if(offlineBtn){
+    offlineBtn.onclick = async ()=>{
+      await ensureLocalData();
+      localStorage.setItem(OFFLINE_KEY,'1');
+      localStorage.setItem(TOKEN_KEY,'local');
+      localStorage.setItem(ROLE_KEY,'funcionario');
+      window.location.href = 'sistema.html';
+    };
+  }
 }
 
 // SISTEMA PAGE logic
@@ -58,10 +164,12 @@ if(window.location.pathname.includes('sistema.html')){
   const btnPdfPortrait = document.getElementById('btnPdfPortrait');
   const btnPdfLandscape = document.getElementById('btnPdfLandscape');
   const fileInput = document.getElementById('fileInput');
+  const btnNewUser = document.getElementById('btnNewUser');
 
   const modalEdit = document.getElementById('modalEdit');
   const modalDetail = document.getElementById('modalDetail');
   const modalSeparate = document.getElementById('modalSeparate');
+  const modalUser = document.getElementById('modalUser');
 
   const palletNumber = document.getElementById('palletNumber');
   const palletColor = document.getElementById('palletColor');
@@ -73,6 +181,10 @@ if(window.location.pathname.includes('sistema.html')){
 
   const sepInput = document.getElementById('sepInput');
   const sepResult = document.getElementById('sepResult');
+  const newUsername = document.getElementById('newUsername');
+  const newPassword = document.getElementById('newPassword');
+  const newRole = document.getElementById('newRole');
+  const userList = document.getElementById('userList');
 
   let pallets = [];
   let editingIndex = null;
@@ -81,7 +193,7 @@ if(window.location.pathname.includes('sistema.html')){
   userInfo.innerText = 'Perfil: ' + (localStorage.getItem('nle_role') || 'funcionario');
   document.querySelectorAll('.admin-block').forEach(el=> el.style.display = (getRole()==='admin')? 'flex':'none');
 
-  logoutBtn.onclick = ()=>{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(ROLE_KEY); window.location='login.html'; };
+  logoutBtn.onclick = ()=>{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(ROLE_KEY); localStorage.removeItem(OFFLINE_KEY); window.location='login.html'; };
 
   btnClear.onclick = ()=>{ search.value=''; render(); };
 
@@ -108,12 +220,17 @@ if(window.location.pathname.includes('sistema.html')){
   btnImport.onclick = ()=> fileInput.click();
   fileInput.onchange = importarJSON;
 
-  // fetch pallets from backend
+  if(btnNewUser){
+    btnNewUser.onclick = ()=> openUserModal();
+  }
+  document.getElementById('cancelUser').onclick = ()=> modalUser.classList.remove('open');
+  document.getElementById('saveUser').onclick = saveUser;
+
+  // fetch pallets from backend or local storage
   async function load(){
-    const offline = localStorage.getItem('nle_offline');
-    if(offline){
-      const raw = localStorage.getItem('pallets_v1') || '[]';
-      pallets = JSON.parse(raw);
+    await ensureLocalData();
+    if(isOffline()){
+      pallets = getLocalPallets();
       render();
       return;
     }
@@ -124,6 +241,36 @@ if(window.location.pathname.includes('sistema.html')){
       render();
     }catch(e){
       alert('Erro ao carregar paletes: ' + e.message);
+    }
+  }
+
+  async function loadUsers(){
+    if(getRole() !== 'admin') return;
+    await ensureLocalData();
+    if(isOffline()){
+      const users = getLocalUsers();
+      userList.innerHTML = '';
+      users.forEach(user => {
+        const item = document.createElement('div');
+        item.className = 'user-item';
+        item.innerHTML = `<span>${user.username}</span><span class="small muted">${user.role}</span>`;
+        userList.appendChild(item);
+      });
+      return;
+    }
+    try{
+      const res = await fetch(API_URL + '/users', { headers: { Authorization: 'Bearer ' + getToken() } });
+      if(!res.ok) return;
+      const users = await res.json();
+      userList.innerHTML = '';
+      users.forEach(user => {
+        const item = document.createElement('div');
+        item.className = 'user-item';
+        item.innerHTML = `<span>${user.username}</span><span class="small muted">${user.role}</span>`;
+        userList.appendChild(item);
+      });
+    }catch(e){
+      userList.innerHTML = '<div class="small muted">Erro ao carregar usuários.</div>';
     }
   }
 
@@ -173,6 +320,53 @@ if(window.location.pathname.includes('sistema.html')){
     modalEdit.classList.add('open');
   }
 
+  function openUserModal(){
+    newUsername.value = '';
+    newPassword.value = '';
+    newRole.value = 'funcionario';
+    loadUsers();
+    modalUser.classList.add('open');
+  }
+
+  async function saveUser(){
+    const username = (newUsername.value || '').trim();
+    const password = (newPassword.value || '').trim();
+    const role = newRole.value;
+    if(!username || !password) return alert('Informe usuário e senha');
+    if(getRole() !== 'admin') return alert('Apenas admin');
+
+    if(isOffline()){
+      const users = getLocalUsers();
+      if(users.some(u => u.username === username)) return alert('Usuário já existe');
+      users.push({ username, password, role });
+      setLocalUsers(users);
+      newUsername.value = '';
+      newPassword.value = '';
+      newRole.value = 'funcionario';
+      await loadUsers();
+      return;
+    }
+
+    try{
+      const res = await fetch(API_URL + '/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify({ username, password, role })
+      });
+      const data = await res.json();
+      if(!res.ok) return alert(data.error || 'Erro ao cadastrar');
+      newUsername.value = '';
+      newPassword.value = '';
+      newRole.value = 'funcionario';
+      await loadUsers();
+    }catch(e){
+      alert('Erro: ' + e.message);
+    }
+  }
+
   async function savePallet(){
     const num = (palletNumber.value||'').trim();
     const raw = (palletProducts.value||'').trim();
@@ -180,12 +374,11 @@ if(window.location.pathname.includes('sistema.html')){
     const products = raw.split(',').map(s=>s.trim()).filter(Boolean);
     const body = { number: num, color: palletColor.value||'#60a5fa', products };
 
-    if(getRole()!=='admin' && !localStorage.getItem('nle_offline')) return alert('Apenas admin');
+    if(getRole()!=='admin' && !isOffline()) return alert('Apenas admin');
 
-    if(localStorage.getItem('nle_offline')){
-      // offline store
+    if(isOffline()){
       if(editingIndex===null) pallets.push(body); else pallets[editingIndex]=body;
-      localStorage.setItem('pallets_v1', JSON.stringify(pallets));
+      setLocalPallets(pallets);
       modalEdit.classList.remove('open'); render(); return;
     }
 
@@ -203,11 +396,11 @@ if(window.location.pathname.includes('sistema.html')){
   }
 
   async function deletePallet(){
-    if(getRole()!=='admin' && !localStorage.getItem('nle_offline')) return alert('Apenas admin');
+    if(getRole()!=='admin' && !isOffline()) return alert('Apenas admin');
     if(!confirm('Excluir palete?')) return;
-    if(localStorage.getItem('nle_offline')){
+    if(isOffline()){
       pallets.splice(editingIndex,1);
-      localStorage.setItem('pallets_v1', JSON.stringify(pallets));
+      setLocalPallets(pallets);
       modalEdit.classList.remove('open'); render(); return;
     }
     try{
@@ -235,7 +428,6 @@ if(window.location.pathname.includes('sistema.html')){
   }
 
   async function gerarPdf(orientation='portrait'){
-    // capture sepResult
     const temp = document.createElement('div'); temp.style.padding='12px'; temp.style.background='#fff'; temp.style.color='#000';
     temp.appendChild(sepResult.cloneNode(true));
     document.body.appendChild(temp);
@@ -284,9 +476,8 @@ if(window.location.pathname.includes('sistema.html')){
       try{
         const imported = JSON.parse(r.result);
         if(!Array.isArray(imported)) throw 'invalid';
-        // if offline, store locally; else push to backend (admin)
-        if(localStorage.getItem('nle_offline')){
-          pallets = imported; localStorage.setItem('pallets_v1', JSON.stringify(pallets)); render(); return;
+        if(isOffline()){
+          pallets = imported; setLocalPallets(pallets); render(); return;
         }
         for(const p of imported){
           await fetch(API_URL + '/pallets', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem(TOKEN_KEY)}, body: JSON.stringify(p) });
@@ -298,5 +489,5 @@ if(window.location.pathname.includes('sistema.html')){
   }
 
   // init
-  (async ()=>{ await load(); })();
+  (async ()=>{ await requireAuth(); await load(); await loadUsers(); })();
 }
