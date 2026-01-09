@@ -27,8 +27,8 @@
   </main>
 
   <script>
-    // Ajuste esta URL para o seu backend deployed (Render)
-    const API_BASE = "http://localhost:10000";
+    // Usa o mesmo domínio/porta do backend publicado
+    const API_BASE = window.location.origin;
 
     async function ping(){
       try{

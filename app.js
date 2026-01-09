@@ -1,5 +1,5 @@
-// Frontend app.js - full features (replace API_URL with your backend URL)
-const API_URL = "http://localhost:10000"; // <<-- CHANGE to your Render URL after deploy
+// Frontend app.js - full features (uses same origin as the deployed backend)
+const API_URL = window.location.origin;
 const TOKEN_KEY = "nle_token";
 const ROLE_KEY = "nle_role";
 
