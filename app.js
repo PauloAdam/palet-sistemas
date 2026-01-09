@@ -99,6 +99,7 @@ async function localLogin(username, password){
 
 // LOGIN PAGE logic
 if(window.location.pathname.includes('login.html')){
+  let serverAvailable = false;
   document.addEventListener('DOMContentLoaded', async ()=>{
     await ensureLocalData();
     const statusEl = document.getElementById('serverStatus');
@@ -106,7 +107,8 @@ if(window.location.pathname.includes('login.html')){
       try{
         const res = await fetch(API_URL + '/health');
         const contentType = res.headers.get('content-type') || '';
-        statusEl.innerText = res.ok && contentType.includes('application/json') ? 'online' : 'local';
+        serverAvailable = res.ok && contentType.includes('application/json');
+        statusEl.innerText = serverAvailable ? 'online' : 'local';
       }catch(e){
         statusEl.innerText = 'local';
       }
@@ -120,8 +122,10 @@ if(window.location.pathname.includes('login.html')){
     const p = document.getElementById('password').value.trim();
     if(!u||!p) return alert('Preencha usuário e senha');
 
-    const serverAuth = await tryServerLogin(u, p);
-    let auth = serverAuth;
+    let auth = null;
+    if(serverAvailable){
+      auth = await tryServerLogin(u, p);
+    }
     if(!auth){
       try{
         auth = await localLogin(u, p);
