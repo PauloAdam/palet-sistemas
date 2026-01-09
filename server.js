@@ -13,6 +13,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.resolve('.')));
 
+app.get('/', (req, res) => {
+  res.sendFile(path.resolve('login.html'));
+});
+
 async function loadDb(){
   try{
     return await fs.readJson(DB_PATH);
