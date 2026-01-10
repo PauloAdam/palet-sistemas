@@ -129,12 +129,12 @@ if(window.location.pathname.includes('sistema.html')){
   }
 
   function render(){
-    const q = (search.value||'').toLowerCase();
+    const q = (search.value||'').trim().toLowerCase();
     grid.innerHTML = '';
     pallets.forEach((p, idx)=>{
       if(q){
-        const numberMatch = String(p.number).toLowerCase() === q;
-        const productMatch = (p.products || []).some((code)=> String(code).toLowerCase() === q);
+        const numberMatch = String(p.number).trim().toLowerCase() === q;
+        const productMatch = (p.products || []).some((code)=> String(code).trim().toLowerCase() === q);
         if(!numberMatch && !productMatch) return;
       }
       const el = document.createElement('div'); el.className='pallet-card';
