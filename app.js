@@ -84,6 +84,7 @@ if(window.location.pathname.includes('sistema.html')){
   logoutBtn.onclick = ()=>{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(ROLE_KEY); window.location='login.html'; };
 
   btnClear.onclick = ()=>{ search.value=''; render(); };
+  search.oninput = ()=> render();
 
   btnNew.onclick = ()=>{ openNew(); };
 
