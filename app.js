@@ -132,7 +132,11 @@ if(window.location.pathname.includes('sistema.html')){
     const q = (search.value||'').toLowerCase();
     grid.innerHTML = '';
     pallets.forEach((p, idx)=>{
-      if(q && !String(p.number).toLowerCase().includes(q) && !(p.products||[]).join(',').toLowerCase().includes(q)) return;
+      if(q){
+        const numberMatch = String(p.number).toLowerCase() === q;
+        const productMatch = (p.products || []).some((code)=> String(code).toLowerCase() === q);
+        if(!numberMatch && !productMatch) return;
+      }
       const el = document.createElement('div'); el.className='pallet-card';
       el.innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div class="colorbox" style="background:${p.color||'#60a5fa'}"></div><div><strong>Palete ${p.number}</strong><div class="small muted">${(p.products||[]).length} produto(s)</div></div></div>
         <div class="chips">${(p.products||[]).slice(0,8).map(x=>'<span class="chip">'+x+'</span>').join('')}</div>
