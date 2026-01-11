@@ -32,7 +32,7 @@
 
     async function ping(){
       try{
-        const r = await fetch(API_BASE + "/pallets", { method: "GET" });
+        const r = await fetch(API_BASE + "/", { method: "GET" });
         document.getElementById('serverStatus').innerText = r.status;
       }catch(e){
         document.getElementById('serverStatus').innerText = "offline";

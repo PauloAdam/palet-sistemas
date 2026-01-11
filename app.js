@@ -79,11 +79,12 @@ if(window.location.pathname.includes('sistema.html')){
 
   // setup UI
   userInfo.innerText = 'Perfil: ' + (localStorage.getItem('nle_role') || 'funcionario');
-  document.querySelectorAll('.admin-block').forEach(el=> el.style.display = (getRole()==='admin')? 'flex':'none');
+  document.querySelectorAll('.admin-block').forEach(el=> el.style.display = 'flex');
 
   logoutBtn.onclick = ()=>{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(ROLE_KEY); window.location='login.html'; };
 
   btnClear.onclick = ()=>{ search.value=''; render(); };
+  search.oninput = ()=> render();
 
   btnNew.onclick = ()=>{ openNew(); };
 
@@ -127,11 +128,19 @@ if(window.location.pathname.includes('sistema.html')){
     }
   }
 
+  function normalizeSearch(value){
+    return String(value ?? '').trim().toLowerCase();
+  }
+
   function render(){
-    const q = (search.value||'').toLowerCase();
+    const q = normalizeSearch(search.value);
     grid.innerHTML = '';
     pallets.forEach((p, idx)=>{
-      if(q && !String(p.number).toLowerCase().includes(q) && !(p.products||[]).join(',').toLowerCase().includes(q)) return;
+      if(q){
+        const numberMatch = normalizeSearch(p.number) === q;
+        const productMatch = (p.products || []).some((code)=> normalizeSearch(code) === q);
+        if(!numberMatch && !productMatch) return;
+      }
       const el = document.createElement('div'); el.className='pallet-card';
       el.innerHTML = `<div style="display:flex;align-items:center;gap:10px"><div class="colorbox" style="background:${p.color||'#60a5fa'}"></div><div><strong>Palete ${p.number}</strong><div class="small muted">${(p.products||[]).length} produto(s)</div></div></div>
         <div class="chips">${(p.products||[]).slice(0,8).map(x=>'<span class="chip">'+x+'</span>').join('')}</div>
@@ -179,8 +188,6 @@ if(window.location.pathname.includes('sistema.html')){
     if(!num || !raw) return alert('Informe número e produtos');
     const products = raw.split(',').map(s=>s.trim()).filter(Boolean);
     const body = { number: num, color: palletColor.value||'#60a5fa', products };
-
-    if(getRole()!=='admin' && !localStorage.getItem('nle_offline')) return alert('Apenas admin');
 
     if(localStorage.getItem('nle_offline')){
       // offline store
