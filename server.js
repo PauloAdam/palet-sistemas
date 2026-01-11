@@ -69,7 +69,7 @@ app.get('/pallets', auth, async (_req, res) => {
   res.json(db.pallets || []);
 });
 
-app.post('/pallets', auth, requireAdmin, async (req, res) => {
+app.post('/pallets', auth, async (req, res) => {
   const { number, color, products } = req.body || {};
   if (!number || !Array.isArray(products)) {
     return res.status(400).json({ error: 'Número e produtos são obrigatórios' });
@@ -81,7 +81,7 @@ app.post('/pallets', auth, requireAdmin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
-app.put('/pallets/:index', auth, requireAdmin, async (req, res) => {
+app.put('/pallets/:index', auth, async (req, res) => {
   const idx = Number(req.params.index);
   if (Number.isNaN(idx)) return res.status(400).json({ error: 'Índice inválido' });
   const { number, color, products } = req.body || {};

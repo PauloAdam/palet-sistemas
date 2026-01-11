@@ -79,7 +79,7 @@ if(window.location.pathname.includes('sistema.html')){
 
   // setup UI
   userInfo.innerText = 'Perfil: ' + (localStorage.getItem('nle_role') || 'funcionario');
-  document.querySelectorAll('.admin-block').forEach(el=> el.style.display = (getRole()==='admin')? 'flex':'none');
+  document.querySelectorAll('.admin-block').forEach(el=> el.style.display = 'flex');
 
   logoutBtn.onclick = ()=>{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(ROLE_KEY); window.location='login.html'; };
 
@@ -188,8 +188,6 @@ if(window.location.pathname.includes('sistema.html')){
     if(!num || !raw) return alert('Informe número e produtos');
     const products = raw.split(',').map(s=>s.trim()).filter(Boolean);
     const body = { number: num, color: palletColor.value||'#60a5fa', products };
-
-    if(getRole()!=='admin' && !localStorage.getItem('nle_offline')) return alert('Apenas admin');
 
     if(localStorage.getItem('nle_offline')){
       // offline store
