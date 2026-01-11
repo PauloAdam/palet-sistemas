@@ -11,6 +11,7 @@ const DB_PATH = path.resolve('database.json');
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.resolve('.')));
 
 async function readDb() {
   const exists = await fs.pathExists(DB_PATH);
